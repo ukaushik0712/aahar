@@ -1,0 +1,12 @@
+{
+	"name": "@aahar/tsconfig",
+	"version": "0.0.1",
+	"files": [
+		"./tsconfig.json"
+	],
+	"devDependencies": {
+		"@sapphire/ts-config": "^5.0.3",
+		"@types/node": "^26.6.5",
+		"typescript": "^7.0.2"
+	}
+}

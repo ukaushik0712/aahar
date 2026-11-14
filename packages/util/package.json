@@ -1,0 +1,34 @@
+{
+	"name": "@aahar/util",
+	"version": "0.0.1",
+	"type": "module",
+	"exports": {
+		"./env": {
+			"types": "./dist/env.d.ts",
+			"import": "./dist/env.js",
+			"require": "./dist/env.js"
+		},
+		"./util": {
+			"types": "./dist/util.d.ts",
+			"import": "./dist/util.js",
+			"require": "./dist/util.js"
+		},
+		"./migrator": {
+			"types": "./dist/migrator.d.ts",
+			"import": "./dist/migrator.js",
+			"require": "./dist/migrator.js"
+		}
+	},
+	"scripts": {
+		"build": "yarn tsdown"
+	},
+	"peerDependencies": {
+		"kysely": "^0.29.6"
+	},
+	"devDependencies": {
+		"@aahar/tsconfig": "workspace:^",
+		"@aahar/tsdown": "workspace:^",
+		"kysely": "^0.29.6",
+		"tsdown": "^0.23.1"
+	}
+}

@@ -1,0 +1,21 @@
+{
+	"name": "@aahar/tsdown",
+	"version": "0.0.1",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		}
+	},
+	"scripts": {
+		"build": "yarn tsdown"
+	},
+	"dependencies": {
+		"tsdown": "^0.23.1"
+	},
+	"devDependencies": {
+		"@aahar/tsconfig": "workspace:*"
+	}
+}

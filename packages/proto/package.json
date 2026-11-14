@@ -1,0 +1,42 @@
+{
+	"name": "@aahar/proto",
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"generate": "yarn buf generate"
+	},
+	"exports": {
+		"./auth/v1": {
+			"types": "./src/gen/aahar/auth/v1/auth_pb.d.ts",
+			"default": "./src/gen/aahar/auth/v1/auth_pb.js"
+		},
+		"./catalog/v1": {
+			"types": "./src/gen/aahar/catalog/v1/catalog_pb.d.ts",
+			"default": "./src/gen/aahar/catalog/v1/catalog_pb.js"
+		},
+		"./cart/v1": {
+			"types": "./src/gen/aahar/cart/v1/cart_pb.d.ts",
+			"default": "./src/gen/aahar/cart/v1/cart_pb.js"
+		},
+		"./orders/v1": {
+			"types": "./src/gen/aahar/orders/v1/orders_pb.d.ts",
+			"default": "./src/gen/aahar/orders/v1/orders_pb.js"
+		},
+		"./payments/v1": {
+			"types": "./src/gen/aahar/payments/v1/payments_pb.d.ts",
+			"default": "./src/gen/aahar/payments/v1/payments_pb.js"
+		},
+		"./kitchen/v1": {
+			"types": "./src/gen/aahar/kitchen/v1/kitchen_pb.d.ts",
+			"default": "./src/gen/aahar/kitchen/v1/kitchen_pb.js"
+		}
+	},
+	"dependencies": {
+		"@bufbuild/protobuf": "^2.16.0",
+		"@bufbuild/protovalidate": "^1.3.0"
+	},
+	"devDependencies": {
+		"@bufbuild/buf": "^1.73.0",
+		"@bufbuild/protoc-gen-es": "^2.16.0"
+	}
+}

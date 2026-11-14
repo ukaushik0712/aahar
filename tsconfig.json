@@ -1,0 +1,6 @@
+{
+	"extends": "@aahar/tsconfig",
+	"compilerOptions": {
+		"rootDir": "."
+	}
+}

@@ -1,0 +1,308 @@
+syntax = "proto3";
+
+package aahar.catalog.v1;
+
+import "buf/validate/validate.proto";
+
+service CatalogService {
+  rpc GetMenu(GetMenuRequest) returns (GetMenuResponse);
+  rpc GetItem(GetItemRequest) returns (GetItemResponse);
+  rpc GetModifierGroup(GetModifierGroupRequest) returns (GetModifierGroupResponse);
+
+  rpc CreateCategory(CreateCategoryRequest) returns (CreateCategoryResponse);
+  rpc UpdateCategory(UpdateCategoryRequest) returns (UpdateCategoryResponse);
+  rpc DeleteCategory(DeleteCategoryRequest) returns (DeleteCategoryResponse);
+
+  rpc CreateItem(CreateItemRequest) returns (CreateItemResponse);
+  rpc UpdateItem(UpdateItemRequest) returns (UpdateItemResponse);
+  rpc DeleteItem(DeleteItemRequest) returns (DeleteItemResponse);
+
+  rpc CreateModifierGroup(CreateModifierGroupRequest) returns (CreateModifierGroupResponse);
+  rpc UpdateModifierGroup(UpdateModifierGroupRequest) returns (UpdateModifierGroupResponse);
+  rpc DeleteModifierGroup(DeleteModifierGroupRequest) returns (DeleteModifierGroupResponse);
+
+  rpc AddModifierGroupToItem(AddModifierGroupToItemRequest) returns (AddModifierGroupToItemResponse);
+  rpc UpdateItemModifierGroup(UpdateItemModifierGroupRequest) returns (UpdateItemModifierGroupResponse); // only supports changing the display order
+  rpc RemoveModifierGroupFromItem(RemoveModifierGroupFromItemRequest) returns (RemoveModifierGroupFromItemResponse);
+
+  rpc CreateModifier(CreateModifierRequest) returns (CreateModifierResponse);
+  rpc UpdateModifier(UpdateModifierRequest) returns (UpdateModifierResponse);
+  rpc DeleteModifier(DeleteModifierRequest) returns (DeleteModifierResponse);
+}
+
+enum FoodType {
+  FOOD_TYPE_UNSPECIFIED = 0;
+  FOOD_TYPE_VEG = 1;
+  FOOD_TYPE_NON_VEG = 2;
+  FOOD_TYPE_VEGAN = 3;
+  FOOD_TYPE_EGG = 4;
+  FOOD_TYPE_JAIN = 5;
+}
+
+message MenuItemSummary {
+  string id = 1;
+  string category_id = 2;
+  string name = 3;
+  string description = 4;
+  string image_url = 5;
+  int64 base_price = 6;
+  int64 packaging_fee = 7;
+  FoodType food_type = 8;
+  bool is_available = 9;
+  bool has_modifiers = 10;
+}
+
+message Category {
+  string id = 1;
+  string name = 2;
+  string schedule_start = 3;
+  string schedule_end = 4;
+  int32 display_order = 5;
+  bool is_available = 6;
+  repeated MenuItemSummary items = 7;
+}
+
+message Modifier {
+  string id = 1;
+  string modifier_group_id = 2;
+  string name = 3;
+  int64 price_delta = 4;
+  bool is_available = 5;
+}
+
+message ModifierGroup {
+  string id = 1;
+  string name = 2;
+  int32 min_selections = 3;
+  int32 max_selections = 4;
+  bool is_available = 5;
+  repeated Modifier modifiers = 6;
+}
+
+// #region Get* RPC
+
+message GetMenuRequest {}
+
+message GetMenuResponse {
+  repeated Category categories = 1;
+}
+
+message GetItemRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  bool include_modifiers = 2;
+}
+
+message GetItemResponse {
+  MenuItemSummary item = 1;
+  repeated ModifierGroup modifier_groups = 2;
+}
+
+message GetModifierGroupRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+message GetModifierGroupResponse {
+  ModifierGroup modifier_group = 1;
+}
+
+// #endregion
+
+// #region Category RPC
+
+message CreateCategoryRequest {
+  string name = 1 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 128
+  ];
+  string schedule_start = 2 [(buf.validate.field).string.pattern = '^([01]\\d|2[0-3]):[0-5]\\d$'];
+  string schedule_end = 3 [(buf.validate.field).string.pattern = '^([01]\\d|2[0-3]):[0-5]\\d$'];
+  int32 display_order = 4 [(buf.validate.field).int32.gte = 0];
+}
+
+message CreateCategoryResponse {
+  Category category = 1;
+}
+
+message UpdateCategoryRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  optional string name = 2 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 128
+  ];
+  optional string schedule_start = 3 [(buf.validate.field).string.len = 5];
+  optional string schedule_end = 4 [(buf.validate.field).string.len = 5];
+  optional int32 display_order = 5 [(buf.validate.field).int32.gte = 0];
+  optional bool is_available = 6;
+}
+
+message UpdateCategoryResponse {
+  Category category = 1;
+}
+
+message DeleteCategoryRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+message DeleteCategoryResponse {}
+
+// #endregion
+
+// #region Item RPC
+
+message CreateItemRequest {
+  string category_id = 1 [(buf.validate.field).string.uuid = true];
+  string name = 2 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 128
+  ];
+  string description = 3 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 512
+  ];
+  string image_url = 4 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 256
+  ];
+  int64 base_price = 5 [(buf.validate.field).int64.gte = 0];
+  int64 packaging_fee = 6 [(buf.validate.field).int64.gte = 0];
+  FoodType food_type = 7;
+}
+
+message CreateItemResponse {
+  MenuItemSummary item = 1;
+}
+
+message UpdateItemRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  optional string category_id = 2 [(buf.validate.field).string.uuid = true];
+  optional string name = 3 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 128
+  ];
+  optional string description = 4 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 512
+  ];
+  optional string image_url = 5 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 256
+  ];
+  optional int64 base_price = 6 [(buf.validate.field).int64.gte = 0];
+  optional int64 packaging_fee = 7 [(buf.validate.field).int64.gte = 0];
+  optional FoodType food_type = 8;
+  optional bool is_available = 9;
+}
+
+message UpdateItemResponse {
+  MenuItemSummary item = 1;
+}
+
+message DeleteItemRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+message DeleteItemResponse {}
+
+// #endregion
+
+// #region Modifier Group RPC
+
+message CreateModifierGroupRequest {
+  string name = 1 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 128
+  ];
+  int32 min_selections = 2 [(buf.validate.field).int32.gte = 0];
+  int32 max_selections = 3 [(buf.validate.field).int32.gte = 1];
+}
+
+message CreateModifierGroupResponse {
+  ModifierGroup modifier_group = 1;
+}
+
+message UpdateModifierGroupRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  optional string name = 2 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 128
+  ];
+  optional int32 min_selections = 3 [(buf.validate.field).int32.gte = 0];
+  optional int32 max_selections = 4 [(buf.validate.field).int32.gte = 1];
+  optional bool is_available = 5;
+}
+
+message UpdateModifierGroupResponse {
+  ModifierGroup modifier_group = 1;
+}
+
+message DeleteModifierGroupRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+message DeleteModifierGroupResponse {}
+
+// #endregion
+
+// #region Item <-> Modifier RPC
+message AddModifierGroupToItemRequest {
+  string item_id = 1 [(buf.validate.field).string.uuid = true];
+  string modifier_group_id = 2 [(buf.validate.field).string.uuid = true];
+  int32 display_order = 3 [(buf.validate.field).int32.gte = 0];
+}
+
+message AddModifierGroupToItemResponse {}
+
+message UpdateItemModifierGroupRequest {
+  string item_id = 1 [(buf.validate.field).string.uuid = true];
+  string modifier_group_id = 2 [(buf.validate.field).string.uuid = true];
+  int32 display_order = 3 [(buf.validate.field).int32.gte = 0]; // not marked `optional` because display_order is the only field that can be changed right now
+}
+
+message UpdateItemModifierGroupResponse {
+  string item_id = 1;
+  string modifier_group_id = 2;
+  int32 display_order = 3;
+}
+
+message RemoveModifierGroupFromItemRequest {
+  string item_id = 1 [(buf.validate.field).string.uuid = true];
+  string modifier_group_id = 2 [(buf.validate.field).string.uuid = true];
+}
+
+message RemoveModifierGroupFromItemResponse {}
+
+// #endregion
+
+// #region Modifier RPC
+
+message CreateModifierRequest {
+  string modifier_group_id = 1 [(buf.validate.field).string.uuid = true];
+  string name = 2 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 128
+  ];
+  int64 price_delta = 3;
+}
+
+message CreateModifierResponse {
+  Modifier modifier = 1;
+}
+
+message UpdateModifierRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  optional string name = 2 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 128
+  ];
+  optional string modifier_group_id = 3 [(buf.validate.field).string.uuid = true];
+  optional int64 price_delta = 4;
+  optional bool is_available = 5;
+}
+
+message UpdateModifierResponse {
+  Modifier modifier = 1;
+}
+
+message DeleteModifierRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+message DeleteModifierResponse {}
+
+// #endregion
