@@ -29,13 +29,13 @@ Items can be of the following types: `VEG`, `NON_VEG`, `VEGAN`, `EGG`, `JAIN`.
 
 ## Postgres Tables
 
-1. **`category`**
+1. **`categories`**
    - `id`
    - `name`, `display_order`
    - `schedule_start`, `schedule_end` (Time slots: e.g., Breakfast active only 07:00–11:00)
    - `is_available`
 
-2. **`item`**
+2. **`items`**
    - `id`
    - `category_id` (FK)
    - `name`, `description`, `image_url`
@@ -44,18 +44,18 @@ Items can be of the following types: `VEG`, `NON_VEG`, `VEGAN`, `EGG`, `JAIN`.
    - `is_available`
    - `packaging_fee`
 
-3. **`modifier_group`** (Defines selection rules)
+3. **`modifier_groups`** (Defines selection rules)
    - `id`
    - `name`
    - `min_selections`
    - `max_selections`
    - `is_available`
 
-4. **`item_modifier_group`** (Many-to-Many bridge)
+4. **`item_modifier_groups`** (Many-to-Many bridge)
    - `item_id` (FK), `modifier_group_id` (FK)
    - `display_order`
 
-5. **`modifier`** (The concrete choices)
+5. **`modifiers`** (The concrete choices)
    - `id`
    - `modifier_group_id` (FK)
    - `name`
@@ -63,16 +63,11 @@ Items can be of the following types: `VEG`, `NON_VEG`, `VEGAN`, `EGG`, `JAIN`.
    - `is_available`
 
 
-## Enterprise Techniques for Catalog
+## Caching
+Catalog follows a Cache-Aside pattern. The database is never queried on routine student menu browsing. Rather, the data is fetched from Dragonfly (where it is stored in a binary format) with a default TTL of 24 hours. If the Dragonfly data has expired (or invalidated in the code by any of the RPCs which modify Items, Category or ItemModifierGroups data), a request to the database is made and cache is updated with this data.
 
-### 1. Multi-Layer Caching (Cache-Aside Pattern)
-Postgres is never queried on routine student menu browsing, rather:
-- **Hot Key in Dragonfly:** `catalog:menu:active` stores the entire pre-compiled Protobuf menu hierarchy.
-- **TTL + Invalidation:** High TTL (e.g., 24 hours), but whenever a Staff member mutates an item, price, or availability, `catalog:menu:active` is immediately invalidated.
+Taking inspiration from Go's singleflight technique for concurrency, [cache.service.ts](./src/services/cache.service.ts) implements the same technique very simply. Imagine a scenario where at a specific time, a lot of students open the menu (i.e the Thundering Herd Problem scenario). On the very first request, if no cache key exists for the menu, a database request has to be made. This request is stored as a promise in a temporary variable. The second request onwards wait for this promise to resolve for the data. Once the promise resolves, i.e we have data from the database, the data is added to the cache and every subsequent request is served from the this cache.
 
-### 2. Role-Based Access Control (RBAC) Contracts
-- **Read RPCs (GetMenu, GetItem, etc):** Public or authenticated `STUDENT`.
-- **Mutating RPCs (CreateCategory, CreateItem, etc):** Allowed to `STAFF` or `SUDO` only.
 
 ## Layout
 
@@ -81,21 +76,24 @@ services/catalog/
 ├── src/
 │   ├── db/
 │   │   ├── database.ts             # Kysely instance
-│   │   ├── migrations/             # Schema definitions
-│   │   └── types.ts                # Database interface
+│   │   ├── migrations/             # Database migrations
+│   │   └── types.ts                # Database interfaces
 │   ├── redis/
 │   │   └── client.ts               # Dragonfly connection
 │   ├── services/
-│   │   ├── catalog.cache.ts        # Cache-aside & serialized menu snapshots
-│   │   └── catalog.service.ts      # Domain logic (pricing math, graph validation)
+│   │   ├── cache.service.ts        # Cache-aside
+│   │   └── query.service.ts        # Kysely queries
 │   ├── handlers/
-│   │   └── catalog.ts              # ConnectRPC router (CatalogService)
+│   │   └── catalog.ts              # ConnectRPC router implementation (CatalogService)
 │   ├── interceptors/
-│   │   └── auth.gate.ts            # RBAC: Read = Public/Student; Write = Staff/Sudo
-│   ├── config.ts
-│   └── server.ts
+│   │   ├── auth.gate.ts            # Authentication
+│   │   └── errorLogger.ts          # Server error logger
+│   ├── mappers/
+│   │   └── catalog.mapper.ts       # Database row to Protobuf message mappers
+│   ├── config.ts                   # Service specific constant values
+│   ├── logger.ts                   # Pino logger instance
+│   └── server.ts                   # HTTP/2 server
 ├── package.json
-└── tsconfig.json
+├── tsconfig.json
+└── tsdown.config.ts
 ```
-
-(this is a high level abstraction and it is bound to change)

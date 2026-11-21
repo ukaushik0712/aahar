@@ -12,7 +12,6 @@ import {
 	DeleteModifierResponseSchema,
 	FoodType as FoodTypeProto,
 	GetItemResponseSchema,
-	GetMenuResponseSchema,
 	GetModifierGroupResponseSchema,
 	RemoveModifierGroupFromItemResponseSchema,
 	UpdateCategoryResponseSchema,
@@ -26,6 +25,7 @@ import { Code, ConnectError, type ConnectRouter } from '@connectrpc/connect';
 import { DatabaseError } from 'pg';
 import type { FoodType } from '../db/types.js';
 import { toMenuItemSummary, toModifierGroup } from '../mappers/catalog.mapper.js';
+import { cacheService } from '../services/cache.service.js';
 import {
 	addModifierGroupToItemQuery,
 	createCategoryQuery,
@@ -36,7 +36,6 @@ import {
 	deleteItemQuery,
 	deleteModifierGroupQuery,
 	deleteModifierQuery,
-	getCategoriesWithItems,
 	getItemModifierGroupsQuery,
 	getItemQuery,
 	getModifierGroupQuery,
@@ -51,16 +50,7 @@ import {
 export default (router: ConnectRouter) =>
 	router.service(CatalogService, {
 		async getMenu() {
-			const categories = await getCategoriesWithItems().execute();
-
-			return create(GetMenuResponseSchema, {
-				categories: categories.map((category) => {
-					return {
-						...category,
-						items: category.items.map(toMenuItemSummary)
-					};
-				})
-			});
+			return cacheService.getMenu();
 		},
 
 		async getItem(req) {
@@ -95,8 +85,9 @@ export default (router: ConnectRouter) =>
 			const { name, scheduleStart, scheduleEnd, displayOrder } = req;
 
 			const id = randomUUIDv7();
-
 			const data = await createCategoryQuery({ id, name, scheduleStart, scheduleEnd, displayOrder }).executeTakeFirstOrThrow();
+
+			await cacheService.invalidateMenu();
 
 			return create(CreateCategoryResponseSchema, {
 				category: data
@@ -119,6 +110,8 @@ export default (router: ConnectRouter) =>
 
 			if (!updatedCategory) throw new ConnectError('Category does not exist.', Code.NotFound);
 
+			await cacheService.invalidateMenu();
+
 			return create(UpdateCategoryResponseSchema, {
 				category: updatedCategory
 			});
@@ -129,6 +122,8 @@ export default (router: ConnectRouter) =>
 
 			const data = await deleteCategoryQuery(id).executeTakeFirst();
 			if (!data) throw new ConnectError('Category does not exist.', Code.NotFound);
+
+			await cacheService.invalidateMenu();
 
 			return create(DeleteCategoryResponseSchema, {});
 		},
@@ -155,6 +150,8 @@ export default (router: ConnectRouter) =>
 					packagingFee: Number(packagingFee),
 					foodType: FoodTypeProto[foodType] as FoodType
 				}).executeTakeFirstOrThrow();
+
+				await cacheService.invalidateMenu();
 
 				return create(CreateItemResponseSchema, {
 					item: toMenuItemSummary({ ...item, hasModifiers: false })
@@ -186,6 +183,8 @@ export default (router: ConnectRouter) =>
 
 				if (!item) throw new ConnectError('Item does not exist.', Code.NotFound);
 
+				await cacheService.invalidateMenu();
+
 				return create(UpdateItemResponseSchema, {
 					item: toMenuItemSummary(item)
 				});
@@ -200,6 +199,8 @@ export default (router: ConnectRouter) =>
 
 			const item = await deleteItemQuery(id).executeTakeFirst();
 			if (!item) throw new ConnectError('Item does not exist.', Code.NotFound);
+
+			await cacheService.invalidateMenu();
 
 			return create(DeleteItemResponseSchema, {});
 		},
@@ -262,6 +263,8 @@ export default (router: ConnectRouter) =>
 
 			const modifierGroup = await deleteModifierGroupQuery(id).executeTakeFirst();
 			if (!modifierGroup) throw new ConnectError('Modifier group does not exist.', Code.NotFound);
+
+			await cacheService.invalidateMenu();
 
 			return create(DeleteModifierGroupResponseSchema, {});
 		},
@@ -345,6 +348,8 @@ export default (router: ConnectRouter) =>
 					displayOrder
 				}).executeTakeFirstOrThrow();
 
+				await cacheService.invalidateMenu();
+
 				return create(AddModifierGroupToItemResponseSchema, {});
 			} catch (err: any) {
 				if (err instanceof DatabaseError) {
@@ -369,6 +374,8 @@ export default (router: ConnectRouter) =>
 			const updated = await updateItemModifierGroupQuery(itemId, modifierGroupId, displayOrder).executeTakeFirst();
 			if (!updated) throw new ConnectError('Item modifier group association not found.', Code.NotFound);
 
+			await cacheService.invalidateMenu();
+
 			return create(UpdateItemModifierGroupResponseSchema, {
 				itemId: updated.itemId,
 				modifierGroupId: updated.modifierGroupId,
@@ -381,6 +388,8 @@ export default (router: ConnectRouter) =>
 
 			const deleted = await removeModifierGroupFromItemQuery(itemId, modifierGroupId).executeTakeFirst();
 			if (!deleted) throw new ConnectError('Item modifier group association not found.', Code.NotFound);
+
+			await cacheService.invalidateMenu();
 
 			return create(RemoveModifierGroupFromItemResponseSchema, {});
 		}

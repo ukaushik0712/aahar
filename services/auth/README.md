@@ -44,16 +44,18 @@ The flow operates as follows:
 services/auth/
 ├── src/
 │   ├── db/
-│   │   ├── database.ts         # Kysely instance & connection pool
-│   │   ├── migrations/         # Schema migrations
-│   │   └── types.ts            # Kysely Database interface
+│   │   ├── database.ts         # Kysely instance
+│   │   ├── migrations/         # Database migrations
+│   │   └── types.ts            # Database interfaces
 │   ├── redis/
-│   │   └── client.ts           # Dragonfly Connection (ioredis)
+│   │   └── client.ts           # Dragonfly Connection
 │   ├── handlers/
 │   │   └── auth.ts             # ConnectRPC router implementation (AuthService)
 │   ├── services/
 │   │   ├── token.service.ts    # JWT handling
-│   └── server.ts               # HTTP/2 server initialization
+|   ├── config.ts               # Service specific constant values
+│   ├── logger.ts               # Pino logger instance
+│   └── server.ts               # HTTP/2 server
 ├── package.json
 ├── tsconfig.json
 └── tsdown.config.ts

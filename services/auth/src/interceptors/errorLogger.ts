@@ -1,5 +1,5 @@
 import { ConnectError, type Interceptor } from '@connectrpc/connect';
-import { kLoggerContext } from '../server.js';
+import { kLoggerContext } from '../logger.js';
 
 export const errorLoggingInterceptor: Interceptor = (next) => async (req) => {
 	try {
